@@ -1,9 +1,9 @@
 "use strict";
 
+const repoUrl = "https://api.github.com/orgs/HackYourFuture/repos?per_page=100";
+
 function main() {
-  const repoUrl =
-    "https://api.github.com/orgs/HackYourFuture/repos?per_page=100";
-  apiCall(repoUrl, dataHandler);
+  apiCall(repoUrl).then(data => dataHandler(data));
 }
 
 function createAndAppend(name, parent, options = {}) {
@@ -22,26 +22,33 @@ function createAndAppend(name, parent, options = {}) {
 
 // Making a request to the API endpoint:
 
-function apiCall(url, callback) {
-  let requestIt = new XMLHttpRequest();
-  requestIt.open("GET", url);
-  requestIt.onload = function() {
-    if (requestIt.status < 400) {
-      callback(requestIt.responseText);
-    } else {
-      // If request is not successful, create an error page:
-      let root = document.getElementById("root");
-      let errorDiv1 = createAndAppend("div", root, { id: "notfound" });
-      let errorDiv2 = createAndAppend("div", errorDiv1, { id: "notfound1" });
-      let errorDiv3 = createAndAppend("div", errorDiv2, { id: "notfound-404" });
-      createAndAppend("div", errorDiv3);
-      let errorStat = createAndAppend("h1", errorDiv3);
-      errorStat.innerHTML = requestIt.status;
-      let errorMsg = createAndAppend("h2", errorDiv2, { id: "errorMsg" });
-      errorMsg.innerHTML = requestIt.statusText;
-    }
-  };
-  requestIt.send();
+function apiCall(url) {
+  return new Promise((resolve, reject) => {
+    let requestIt = new XMLHttpRequest();
+    requestIt.open("GET", url);
+    requestIt.onload = function() {
+      if (requestIt.status < 400) {
+        resolve(requestIt.responseText);
+      } else {
+        // If request is not successful, create an error page:
+        let root = document.getElementById("root");
+        let errorDiv1 = createAndAppend("div", root, { id: "notfound" });
+        let errorDiv2 = createAndAppend("div", errorDiv1, { id: "notfound1" });
+        let errorDiv3 = createAndAppend("div", errorDiv2, {
+          id: "notfound-404"
+        });
+        createAndAppend("div", errorDiv3);
+        let errorStat = createAndAppend("h1", errorDiv3);
+        errorStat.innerHTML = requestIt.status;
+        console.log(requestIt.status);
+        let errorMsg = createAndAppend("h2", errorDiv2, { id: "errorMsg" });
+        errorMsg.innerHTML = requestIt.statusText;
+        console.log(requestIt.statusText);
+        reject(new Error(requestIt.status, requestIt.statusText));
+      }
+    };
+    requestIt.send();
+  });
 }
 
 // Handling the data:
@@ -91,9 +98,15 @@ function dataHandler(data) {
   createAndAppend("hr", rightSide);
   let contributorList = createAndAppend("ul", rightSide);
   contributorList.id = "contributorList";
-  fillCombobox(dataParsed);
-  comboChangeListener(dataParsed);
-  dataRender(dataParsed);
+
+  //Passing parsed values with resolved promises:
+
+  const fillCombo = Promise.resolve(dataParsed);
+  fillCombo.then(data => fillCombobox(data));
+  const comboChange = Promise.resolve(dataParsed);
+  comboChange.then(data => comboChangeListener(data));
+  const dataRend = Promise.resolve(dataParsed);
+  dataRend.then(data => dataRender(data));
 }
 
 // Filling the combobox:
@@ -173,9 +186,9 @@ function comboChangeListener(obj) {
         date = date.toUTCString();
         updateHeadInfo.innerText = date;
 
-        //Callback contributor url:
+        //Passing contributor url data to the function with promise:
         let contrUrl = obj[key].contributors_url;
-        apiCall(contrUrl, getContributors);
+        apiCall(contrUrl).then(data => getContributors(data));
       }
     }
   }
@@ -281,9 +294,9 @@ function dataRender(obj) {
       date = date.toUTCString();
       updateHeadInfo.innerText = date;
 
-      //Callback contributor url:
+      //Passing contributor url data to the function with promise:
       let contrUrl = obj[key].contributors_url;
-      apiCall(contrUrl, getContributors);
+      apiCall(contrUrl).then(data => getContributors(data));
     }
   }
 }
